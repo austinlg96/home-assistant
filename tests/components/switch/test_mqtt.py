@@ -20,7 +20,7 @@ class TestSwitchMQTT(unittest.TestCase):
         self.mock_publish = mock_mqtt_component(self.hass)
 
     def tearDown(self):  # pylint: disable=invalid-name
-        """"Stop everything that was started."""
+        """Stop everything that was started."""
         self.hass.stop()
 
     def test_controlling_state_via_topic(self):
@@ -248,3 +248,57 @@ class TestSwitchMQTT(unittest.TestCase):
 
         state = self.hass.states.get('switch.test')
         self.assertEqual(STATE_ON, state.state)
+
+    def test_custom_state_payload(self):
+        """Test the state payload."""
+        assert setup_component(self.hass, switch.DOMAIN, {
+            switch.DOMAIN: {
+                'platform': 'mqtt',
+                'name': 'test',
+                'state_topic': 'state-topic',
+                'command_topic': 'command-topic',
+                'payload_on': 1,
+                'payload_off': 0,
+                'state_on': "HIGH",
+                'state_off': "LOW",
+            }
+        })
+
+        state = self.hass.states.get('switch.test')
+        self.assertEqual(STATE_OFF, state.state)
+        self.assertFalse(state.attributes.get(ATTR_ASSUMED_STATE))
+
+        fire_mqtt_message(self.hass, 'state-topic', 'HIGH')
+        self.hass.block_till_done()
+
+        state = self.hass.states.get('switch.test')
+        self.assertEqual(STATE_ON, state.state)
+
+        fire_mqtt_message(self.hass, 'state-topic', 'LOW')
+        self.hass.block_till_done()
+
+        state = self.hass.states.get('switch.test')
+        self.assertEqual(STATE_OFF, state.state)
+
+    def test_unique_id(self):
+        """Test unique id option only creates one switch per unique_id."""
+        assert setup_component(self.hass, switch.DOMAIN, {
+            switch.DOMAIN: [{
+                'platform': 'mqtt',
+                'name': 'Test 1',
+                'state_topic': 'test-topic',
+                'command_topic': 'command-topic',
+                'unique_id': 'TOTALLY_UNIQUE'
+            }, {
+                'platform': 'mqtt',
+                'name': 'Test 2',
+                'state_topic': 'test-topic',
+                'command_topic': 'command-topic',
+                'unique_id': 'TOTALLY_UNIQUE'
+            }]
+        })
+
+        fire_mqtt_message(self.hass, 'test-topic', 'payload')
+        self.hass.block_till_done()
+        assert len(self.hass.states.async_entity_ids()) == 2
+        # all switches group is 1, unique id created is 1

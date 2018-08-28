@@ -24,7 +24,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.restore_state import async_get_last_state
 from homeassistant.helpers.typing import GPSType, ConfigType, HomeAssistantType
 import homeassistant.helpers.config_validation as cv
-import homeassistant.util as util
+from homeassistant import util
 from homeassistant.util.async_ import run_coroutine_threadsafe
 import homeassistant.util.dt as dt_util
 from homeassistant.util.yaml import dump
@@ -33,7 +33,7 @@ from homeassistant.helpers.event import async_track_utc_time_change
 from homeassistant.const import (
     ATTR_GPS_ACCURACY, ATTR_LATITUDE, ATTR_LONGITUDE, CONF_NAME, CONF_MAC,
     DEVICE_DEFAULT_NAME, STATE_HOME, STATE_NOT_HOME, ATTR_ENTITY_ID,
-    CONF_ICON, ATTR_ICON)
+    CONF_ICON, ATTR_ICON, ATTR_NAME)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,7 +71,6 @@ ATTR_GPS = 'gps'
 ATTR_HOST_NAME = 'host_name'
 ATTR_LOCATION_NAME = 'location_name'
 ATTR_MAC = 'mac'
-ATTR_NAME = 'name'
 ATTR_SOURCE_TYPE = 'source_type'
 ATTR_CONSIDER_HOME = 'consider_home'
 
@@ -232,7 +231,7 @@ def async_setup(hass: HomeAssistantType, config: ConfigType):
     return True
 
 
-class DeviceTracker(object):
+class DeviceTracker:
     """Representation of a device tracker."""
 
     def __init__(self, hass: HomeAssistantType, consider_home: timedelta,
@@ -538,7 +537,7 @@ class Device(Entity):
         """
         if not self.last_seen:
             return
-        elif self.location_name:
+        if self.location_name:
             self._state = self.location_name
         elif self.gps is not None and self.source_type == SOURCE_TYPE_GPS:
             zone_state = async_active_zone(
@@ -578,7 +577,7 @@ class Device(Entity):
                         state.attributes[ATTR_LONGITUDE])
 
 
-class DeviceScanner(object):
+class DeviceScanner:
     """Device scanner object."""
 
     hass = None  # type: HomeAssistantType
